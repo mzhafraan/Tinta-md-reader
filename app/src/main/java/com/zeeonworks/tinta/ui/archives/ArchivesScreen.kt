@@ -3,9 +3,11 @@ package com.zeeonworks.tinta.ui.archives
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,24 +19,32 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -44,25 +54,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zeeonworks.tinta.data.model.DocumentArchive
-import com.zeeonworks.tinta.ui.archives.components.ArchiveCard
+import com.zeeonworks.tinta.ui.archives.components.AppleBooksBookCard
+import com.zeeonworks.tinta.ui.archives.components.AppleBooksBottomBar
+import com.zeeonworks.tinta.ui.archives.components.AppleBooksContinueCard
+import com.zeeonworks.tinta.ui.archives.components.AppleBooksTopPicksCard
+import com.zeeonworks.tinta.ui.archives.components.AppleNavTab
+import com.zeeonworks.tinta.ui.archives.components.AppleReadingGoalsSheet
 import com.zeeonworks.tinta.ui.archives.components.EmptyArchivesView
-import com.zeeonworks.tinta.ui.theme.TintaBorderDark
-import com.zeeonworks.tinta.ui.theme.TintaBorderHairline
-import com.zeeonworks.tinta.ui.theme.TintaCharcoalInk
-import com.zeeonworks.tinta.ui.theme.TintaMutedInk
-import com.zeeonworks.tinta.ui.theme.TintaPaperCard
-import com.zeeonworks.tinta.ui.theme.TintaParchmentBackground
-import com.zeeonworks.tinta.ui.theme.TintaTerracotta
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
+/**
+ * 🍏 Apple Books Home & Library Experience (Plek Ketiplek Screenshot 1, 3, & 4)
+ */
 @Composable
 fun ArchivesScreen(
     onNavigateToReader: (String) -> Unit,
@@ -72,9 +83,11 @@ fun ArchivesScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var archiveToDelete by remember { mutableStateOf<DocumentArchive?>(null) }
+    var currentTab by remember { mutableStateOf(AppleNavTab.HOME) }
+    var showGoalsSheet by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
-    // File Picker Contract (FR-01: OpenDocument)
+    // SAF Document Picker Contract (FR-01)
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -97,210 +110,501 @@ fun ArchivesScreen(
         }
     }
 
-    val todayStamp = remember {
-        val sdf = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.US)
-        sdf.format(Date()).uppercase()
+    // Open goals sheet automatically when Goals tab is tapped
+    LaunchedEffect(currentTab) {
+        if (currentTab == AppleNavTab.GOALS) {
+            showGoalsSheet = true
+        }
     }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = {
+            AppleBooksBottomBar(
+                currentTab = currentTab,
+                onTabSelected = { selected ->
+                    currentTab = selected
+                }
+            )
+        },
         floatingActionButton = {
+            // Elegant Apple Pill Button for adding dispatches
             ExtendedFloatingActionButton(
-                onClick = {
-                    filePickerLauncher.launch(arrayOf("*/*"))
-                },
-                containerColor = TintaTerracotta,
-                contentColor = TintaPaperCard,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 3.dp),
-                shape = RoundedCornerShape(2.dp),
+                onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+                containerColor = Color(0xFF111111),
+                contentColor = Color.White,
+                shape = RoundedCornerShape(24.dp),
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
                 icon = {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = "Add Clipping",
-                        tint = TintaPaperCard
+                        contentDescription = "Import Markdown",
+                        tint = Color.White
                     )
                 },
                 text = {
                     Text(
-                        text = "ADD CLIPPING",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            letterSpacing = 1.sp,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = TintaPaperCard
+                        text = "Import Dispatch",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
                     )
-                }
+                },
+                modifier = Modifier.padding(bottom = 60.dp) // Offset above floating bottom bar
             )
         },
-        containerColor = TintaParchmentBackground
+        containerColor = Color(0xFFF9F9FB) // Apple Books Clean Neutral Canvas
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Masthead / Vintage Editorial Header
-            EditorialMasthead(todayStamp = todayStamp)
-
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(
-                            color = TintaTerracotta,
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Unfolding dispatch...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TintaMutedInk
-                        )
-                    }
+            when (currentTab) {
+                AppleNavTab.HOME -> {
+                    AppleHomeTabContent(
+                        archives = archives,
+                        isLoading = uiState.isLoading,
+                        onOpenArchive = { archive ->
+                            onNavigateToReader(archive.id.ifBlank { archive.uriString })
+                        },
+                        onDeleteArchive = { archive ->
+                            viewModel.deleteArchive(archive)
+                        },
+                        onOpenGoals = { showGoalsSheet = true },
+                        onPickFile = { filePickerLauncher.launch(arrayOf("*/*")) }
+                    )
                 }
-            } else if (archives.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    EmptyArchivesView(
-                        onProcureDispatch = {
-                            filePickerLauncher.launch(arrayOf("*/*"))
+                AppleNavTab.LIBRARY -> {
+                    AppleLibraryTabContent(
+                        archives = archives,
+                        isLoading = uiState.isLoading,
+                        onOpenArchive = { archive ->
+                            onNavigateToReader(archive.id.ifBlank { archive.uriString })
+                        },
+                        onPickFile = { filePickerLauncher.launch(arrayOf("*/*")) }
+                    )
+                }
+                AppleNavTab.GOALS -> {
+                    // Fallback to Home behind the sheet
+                    AppleHomeTabContent(
+                        archives = archives,
+                        isLoading = uiState.isLoading,
+                        onOpenArchive = { archive ->
+                            onNavigateToReader(archive.id.ifBlank { archive.uriString })
+                        },
+                        onDeleteArchive = { archive ->
+                            viewModel.deleteArchive(archive)
+                        },
+                        onOpenGoals = { showGoalsSheet = true },
+                        onPickFile = { filePickerLauncher.launch(arrayOf("*/*")) }
+                    )
+                }
+                AppleNavTab.SEARCH -> {
+                    AppleSearchTabContent(
+                        archives = archives,
+                        query = searchQuery,
+                        onQueryChange = { searchQuery = it },
+                        onOpenArchive = { archive ->
+                            onNavigateToReader(archive.id.ifBlank { archive.uriString })
                         }
                     )
                 }
-            } else {
-                // 2-Column Newspaper Clippings Grid (FR-05)
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 80.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+            }
+
+            // Goals Modal Sheet (Screenshot 4)
+            if (showGoalsSheet) {
+                AppleReadingGoalsSheet(
+                    completedCount = minOf(archives.size, 5),
+                    monthlyGoal = 5,
+                    recentArchives = archives,
+                    onDismissRequest = {
+                        showGoalsSheet = false
+                        if (currentTab == AppleNavTab.GOALS) {
+                            currentTab = AppleNavTab.HOME
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 🍏 Tab 1: Apple Books "Home" Tab (Screenshot 1)
+ */
+@Composable
+private fun AppleHomeTabContent(
+    archives: List<DocumentArchive>,
+    isLoading: Boolean,
+    onOpenArchive: (DocumentArchive) -> Unit,
+    onDeleteArchive: (DocumentArchive) -> Unit,
+    onOpenGoals: () -> Unit,
+    onPickFile: () -> Unit
+) {
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Color(0xFF007AFF))
+        }
+        return
+    }
+
+    if (archives.isEmpty()) {
+        EmptyArchivesView(onProcureDispatch = onPickFile)
+        return
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 90.dp)
+    ) {
+        // Top Header Row: "Home" Title & Circular Goal Ring + Profile
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Home",
+                    fontSize = 34.sp,
+                    fontFamily = FontFamily.Serif,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF111111)
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(
-                        items = archives,
-                        key = { it.id.ifBlank { it.uriString } }
-                    ) { archive ->
-                        ArchiveCard(
-                            archive = archive,
-                            onClick = {
-                                onNavigateToReader(archive.id)
-                            },
-                            onDelete = {
-                                archiveToDelete = archive
-                            }
+                    // Reading Goal Circular Badge (Screenshot 1)
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .shadow(elevation = 2.dp, shape = CircleShape)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                            .clickable(onClick = onOpenGoals),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${minOf(archives.size, 5)}\n5",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF00C7BE), // Apple Cyan
+                            lineHeight = 10.sp,
+                            modifier = Modifier.padding(2.dp)
+                        )
+                    }
+
+                    // Avatar Circle
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFE5E5EA))
+                            .clickable(onClick = onOpenGoals),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Profile",
+                            tint = Color(0xFF6E6E73),
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
             }
         }
-    }
 
-    // Delete Confirmation Dialog (FR-04)
-    archiveToDelete?.let { archive ->
-        AlertDialog(
-            onDismissRequest = { archiveToDelete = null },
-            title = {
+        // Section 1: "Continue" Horizontal Row (Screenshot 1)
+        item {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Remove Clipping?",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TintaCharcoalInk
+                    text = "Continue",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF111111),
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
                 )
-            },
-            text = {
-                Text(
-                    text = "Remove \"${archive.title}\" from The Archives? The original dispatch file on your device will remain untouched.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TintaMutedInk
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteArchive(archive)
-                        archiveToDelete = null
-                    }
+
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
+                    itemsIndexed(archives) { index, archive ->
+                        AppleBooksContinueCard(
+                            archive = archive,
+                            index = index,
+                            onClick = { onOpenArchive(archive) },
+                            onDelete = { onDeleteArchive(archive) }
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(18.dp))
+        }
+
+        // Section 2: "Top Picks" (Screenshot 1)
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+            ) {
+                Text(
+                    text = "Top Picks",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF111111),
+                    modifier = Modifier.padding(vertical = 6.dp)
+                )
+
+                AppleBooksTopPicksCard(
+                    archives = archives,
+                    onSelectArchive = onOpenArchive
+                )
+            }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // Section 3: "All Dispatches / Want to Read" (Screenshot 1)
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "REMOVE",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = TintaTerracotta
+                        text = "All Dispatches",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF111111)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                        contentDescription = "View all",
+                        tint = Color(0xFF8E8E93),
+                        modifier = Modifier.size(14.dp)
                     )
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { archiveToDelete = null }) {
-                    Text(
-                        text = "CANCEL",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = TintaMutedInk
+
+                Text(
+                    text = "${archives.size} files",
+                    fontSize = 13.sp,
+                    color = Color(0xFF8E8E93)
+                )
+            }
+        }
+
+        // Shelf of books
+        item {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                itemsIndexed(archives) { index, archive ->
+                    AppleBooksBookCard(
+                        archive = archive,
+                        index = index,
+                        onClick = { onOpenArchive(archive) },
+                        modifier = Modifier.width(130.dp)
                     )
                 }
-            },
-            containerColor = TintaPaperCard,
-            shape = RoundedCornerShape(2.dp)
-        )
+            }
+        }
     }
 }
 
+/**
+ * 🍏 Tab 2: Apple Books "Library" Tab (Screenshot 3)
+ */
 @Composable
-private fun EditorialMasthead(todayStamp: String) {
+private fun AppleLibraryTabContent(
+    archives: List<DocumentArchive>,
+    isLoading: Boolean,
+    onOpenArchive: (DocumentArchive) -> Unit,
+    onPickFile: () -> Unit
+) {
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Color(0xFF007AFF))
+        }
+        return
+    }
+
+    if (archives.isEmpty()) {
+        EmptyArchivesView(onProcureDispatch = onPickFile)
+        return
+    }
+
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .fillMaxSize()
+            .padding(horizontal = 20.dp)
     ) {
-        // Double hairline rule on top
-        HorizontalDivider(thickness = 1.dp, color = TintaBorderDark)
-        Spacer(modifier = Modifier.height(2.dp))
-        HorizontalDivider(thickness = 0.5.dp, color = TintaBorderHairline)
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Main Masthead Title
         Text(
-            text = "THE ARCHIVES",
-            style = MaterialTheme.typography.displayLarge.copy(
-                letterSpacing = 2.sp,
-                fontWeight = FontWeight.Bold
-            ),
-            color = TintaCharcoalInk,
-            textAlign = TextAlign.Center
+            text = "Library",
+            fontSize = 34.sp,
+            fontFamily = FontFamily.Serif,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF111111)
         )
 
-        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = "${archives.size} offline documents in your collection",
+            fontSize = 13.sp,
+            color = Color(0xFF8E8E93)
+        )
 
-        // Subtitle banner / Issue stamp
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            contentPadding = PaddingValues(bottom = 90.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxSize()
         ) {
-            Text(
-                text = todayStamp,
-                style = MaterialTheme.typography.labelSmall,
-                color = TintaMutedInk
-            )
+            itemsIndexed(archives) { index, archive ->
+                AppleBooksBookCard(
+                    archive = archive,
+                    index = index,
+                    onClick = { onOpenArchive(archive) }
+                )
+            }
+        }
+    }
+}
 
-            Text(
-                text = "VINTAGE DISPATCH READER",
-                style = MaterialTheme.typography.labelSmall,
-                color = TintaTerracotta
-            )
+/**
+ * 🍏 Tab 4: Apple Books Search Filter
+ */
+@Composable
+private fun AppleSearchTabContent(
+    archives: List<DocumentArchive>,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onOpenArchive: (DocumentArchive) -> Unit
+) {
+    val filtered = remember(query, archives) {
+        if (query.isBlank()) archives
+        else archives.filter {
+            it.title.contains(query, ignoreCase = true) || it.snippet.contains(query, ignoreCase = true)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp)
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Search",
+            fontSize = 34.sp,
+            fontFamily = FontFamily.Serif,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF111111)
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Apple Style Search Input Box
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color(0xFFE5E5EA))
+                .padding(horizontal = 12.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = Color(0xFF8E8E93),
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+
+                TextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    placeholder = {
+                        Text(
+                            text = "Search titles, notes, and specs...",
+                            fontSize = 15.sp,
+                            color = Color(0xFF8E8E93)
+                        )
+                    },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    ),
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+
+                if (query.isNotBlank()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = "Clear search",
+                            tint = Color(0xFF8E8E93)
+                        )
+                    }
+                }
+            }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider(thickness = 1.5.dp, color = TintaCharcoalInk)
-        Spacer(modifier = Modifier.height(1.dp))
-        HorizontalDivider(thickness = 0.5.dp, color = TintaBorderHairline)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = if (query.isBlank()) "Recent Dispatches" else "${filtered.size} Results Found",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFF6E6E73)
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            contentPadding = PaddingValues(bottom = 90.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            itemsIndexed(filtered) { index, archive ->
+                AppleBooksBookCard(
+                    archive = archive,
+                    index = index,
+                    onClick = { onOpenArchive(archive) }
+                )
+            }
+        }
     }
 }

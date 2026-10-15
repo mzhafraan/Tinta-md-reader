@@ -8,23 +8,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.zeeonworks.tinta.ui.theme.TintaBorderDark
-import com.zeeonworks.tinta.ui.theme.TintaBorderHairline
-import com.zeeonworks.tinta.ui.theme.TintaMutedInk
-import com.zeeonworks.tinta.ui.theme.TintaTerracotta
+import com.zeeonworks.tinta.ui.theme.LocalAppleBooksTheme
 
 @Composable
 fun EditorialDivider(
     modifier: Modifier = Modifier,
     ornament: String? = "✦ ✦ ✦"
 ) {
+    val theme = LocalAppleBooksTheme.current
+
     if (ornament != null) {
         Row(
             modifier = modifier
@@ -36,23 +34,21 @@ fun EditorialDivider(
             HorizontalDivider(
                 modifier = Modifier.weight(1f),
                 thickness = 1.dp,
-                color = TintaBorderHairline
+                color = theme.colors.border
             )
 
             Text(
                 text = ornament,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 10.sp,
-                    letterSpacing = 2.sp
-                ),
-                color = TintaTerracotta,
+                fontSize = 11.sp,
+                letterSpacing = 2.sp,
+                color = theme.colors.accent,
                 modifier = Modifier.padding(horizontal = 12.dp)
             )
 
             HorizontalDivider(
                 modifier = Modifier.weight(1f),
                 thickness = 1.dp,
-                color = TintaBorderHairline
+                color = theme.colors.border
             )
         }
     } else {
@@ -61,9 +57,9 @@ fun EditorialDivider(
                 .fillMaxWidth()
                 .padding(vertical = 12.dp)
         ) {
-            HorizontalDivider(thickness = 1.dp, color = TintaBorderDark)
+            HorizontalDivider(thickness = 1.dp, color = theme.colors.border)
             Spacer(modifier = Modifier.height(2.dp))
-            HorizontalDivider(thickness = 0.5.dp, color = TintaBorderHairline)
+            HorizontalDivider(thickness = 0.5.dp, color = theme.colors.border.copy(alpha = 0.5f))
         }
     }
 }

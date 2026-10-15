@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -28,14 +27,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.zeeonworks.tinta.ui.theme.TintaBorderHairline
-import com.zeeonworks.tinta.ui.theme.TintaCharcoalInk
-import com.zeeonworks.tinta.ui.theme.TintaCodeBackground
-import com.zeeonworks.tinta.ui.theme.TintaCodeText
-import com.zeeonworks.tinta.ui.theme.TintaMutedInk
-import com.zeeonworks.tinta.ui.theme.TintaPaperCard
-import com.zeeonworks.tinta.ui.theme.TintaTerracotta
-import com.zeeonworks.tinta.ui.theme.TypewriterMonospace
+import com.zeeonworks.tinta.ui.theme.LocalAppleBooksTheme
 import org.commonmark.node.Block
 import org.commonmark.node.BlockQuote
 import org.commonmark.node.BulletList
@@ -70,7 +62,7 @@ fun MarkdownContent(
         var child = document.firstChild
         while (child != null) {
             RenderBlockNode(child)
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             child = child.next
         }
     }
@@ -123,32 +115,15 @@ private fun RenderBlockNode(node: Node) {
 
 @Composable
 private fun RenderHeading(heading: Heading) {
-    val text = remember(heading) { buildInlineAnnotatedString(heading) }
-    val (style, topPadding, bottomPadding, hasUnderline) = when (heading.level) {
-        1 -> Quadruple(
-            MaterialTheme.typography.headlineLarge.copy(fontSize = 24.sp, lineHeight = 30.sp),
-            16.dp,
-            8.dp,
-            true
-        )
-        2 -> Quadruple(
-            MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp, lineHeight = 26.sp),
-            14.dp,
-            6.dp,
-            false
-        )
-        3 -> Quadruple(
-            MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp, lineHeight = 24.sp),
-            12.dp,
-            4.dp,
-            false
-        )
-        else -> Quadruple(
-            MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, lineHeight = 22.sp),
-            10.dp,
-            4.dp,
-            false
-        )
+    val theme = LocalAppleBooksTheme.current
+    val text = remember(heading, theme) { buildInlineAnnotatedString(heading, theme) }
+
+    val baseScale = theme.fontSizeSp / 16f
+    val (fontSize, lineHeight, topPadding, bottomPadding) = when (heading.level) {
+        1 -> Quadruple(26f * baseScale, 32f * baseScale, 20.dp, 10.dp)
+        2 -> Quadruple(22f * baseScale, 28f * baseScale, 16.dp, 8.dp)
+        3 -> Quadruple(19f * baseScale, 25f * baseScale, 14.dp, 6.dp)
+        else -> Quadruple(17f * baseScale, 23f * baseScale, 12.dp, 4.dp)
     }
 
     Column(
@@ -158,16 +133,20 @@ private fun RenderHeading(heading: Heading) {
     ) {
         Text(
             text = text,
-            style = style,
-            color = TintaCharcoalInk
+            fontSize = fontSize.sp,
+            lineHeight = lineHeight.sp,
+            fontFamily = theme.font.fontFamily,
+            fontWeight = FontWeight.Bold,
+            color = theme.colors.textPrimary
         )
-        if (hasUnderline) {
-            Spacer(modifier = Modifier.height(4.dp))
+
+        if (heading.level == 1) {
+            Spacer(modifier = Modifier.height(6.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp)
-                    .background(TintaBorderHairline)
+                    .background(theme.colors.border)
             )
         }
     }
@@ -177,52 +156,36 @@ private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third:
 
 @Composable
 private fun RenderParagraph(paragraph: Paragraph) {
-    val annotatedString = remember(paragraph) { buildInlineAnnotatedString(paragraph) }
+    val theme = LocalAppleBooksTheme.current
+    val annotatedString = remember(paragraph, theme) { buildInlineAnnotatedString(paragraph, theme) }
 
     Text(
         text = annotatedString,
-        style = MaterialTheme.typography.bodyLarge.copy(
-            lineHeight = 26.sp,
-            color = TintaCharcoalInk
-        )
+        fontSize = theme.fontSizeSp.sp,
+        lineHeight = (theme.fontSizeSp * theme.lineSpacingMultiplier).sp,
+        fontFamily = theme.font.fontFamily,
+        fontWeight = theme.fontWeight,
+        color = theme.colors.textPrimary
     )
 }
 
 @Composable
 private fun RenderBlockQuote(blockQuote: BlockQuote) {
+    val theme = LocalAppleBooksTheme.current
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TintaPaperCard, RoundedCornerShape(2.dp))
+            .background(theme.colors.surface, RoundedCornerShape(8.dp))
             .drawBehind {
-                // Editorial thick vertical border on left
                 drawLine(
-                    color = TintaTerracotta,
+                    color = theme.colors.accent,
                     start = Offset(0f, 0f),
                     end = Offset(0f, size.height),
                     strokeWidth = 4.dp.toPx()
                 )
-                // Hairline border on remaining sides
-                drawLine(
-                    color = TintaBorderHairline,
-                    start = Offset(0f, 0f),
-                    end = Offset(size.width, 0f),
-                    strokeWidth = 1.dp.toPx()
-                )
-                drawLine(
-                    color = TintaBorderHairline,
-                    start = Offset(size.width, 0f),
-                    end = Offset(size.width, size.height),
-                    strokeWidth = 1.dp.toPx()
-                )
-                drawLine(
-                    color = TintaBorderHairline,
-                    start = Offset(0f, size.height),
-                    end = Offset(size.width, size.height),
-                    strokeWidth = 1.dp.toPx()
-                )
             }
-            .padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)
+            .padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp)
     ) {
         Column {
             var child = blockQuote.firstChild
@@ -237,21 +200,18 @@ private fun RenderBlockQuote(blockQuote: BlockQuote) {
 }
 
 @Composable
-private fun RenderBulletList(bulletList: BulletList) {
-    Column(modifier = Modifier.fillMaxWidth().padding(start = 8.dp)) {
-        var item = bulletList.firstChild
+private fun RenderBulletList(list: BulletList) {
+    val theme = LocalAppleBooksTheme.current
+    Column(modifier = Modifier.padding(start = 8.dp)) {
+        var item = list.firstChild
         while (item != null) {
             if (item is ListItem) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 3.dp)
-                ) {
+                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                     Text(
                         text = "•",
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                        color = TintaTerracotta,
-                        modifier = Modifier.padding(end = 8.dp)
+                        fontSize = theme.fontSizeSp.sp,
+                        color = theme.colors.accent,
+                        modifier = Modifier.width(18.dp)
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         var child = item.firstChild
@@ -270,23 +230,21 @@ private fun RenderBulletList(bulletList: BulletList) {
 }
 
 @Composable
-private fun RenderOrderedList(orderedList: OrderedList) {
-    var index = orderedList.markerStartNumber ?: 1
-    Column(modifier = Modifier.fillMaxWidth().padding(start = 8.dp)) {
-        var item = orderedList.firstChild
+private fun RenderOrderedList(list: OrderedList) {
+    val theme = LocalAppleBooksTheme.current
+    var index = list.startNumber
+    Column(modifier = Modifier.padding(start = 8.dp)) {
+        var item = list.firstChild
         while (item != null) {
             if (item is ListItem) {
-                val numLabel = "$index."
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 3.dp)
-                ) {
+                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                     Text(
-                        text = numLabel,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
-                        color = TintaMutedInk,
-                        modifier = Modifier.width(24.dp)
+                        text = "$index.",
+                        fontSize = (theme.fontSizeSp - 1f).sp,
+                        fontFamily = theme.font.fontFamily,
+                        fontWeight = FontWeight.Bold,
+                        color = theme.colors.textSecondary,
+                        modifier = Modifier.width(26.dp)
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         var child = item.firstChild
@@ -305,66 +263,85 @@ private fun RenderOrderedList(orderedList: OrderedList) {
     }
 }
 
-private fun buildInlineAnnotatedString(parent: Node): AnnotatedString {
+private fun buildInlineAnnotatedString(
+    node: Node,
+    theme: com.zeeonworks.tinta.ui.theme.AppleBooksThemeState
+): AnnotatedString {
     return buildAnnotatedString {
-        appendInlineNodes(parent.firstChild)
+        var child = node.firstChild
+        while (child != null) {
+            appendNode(child, theme)
+            child = child.next
+        }
     }
 }
 
-private fun AnnotatedString.Builder.appendInlineNodes(firstNode: Node?) {
-    var current = firstNode
-    while (current != null) {
-        when (current) {
-            is org.commonmark.node.Text -> {
-                append(current.literal)
+private fun AnnotatedString.Builder.appendNode(
+    node: Node,
+    theme: com.zeeonworks.tinta.ui.theme.AppleBooksThemeState
+) {
+    when (node) {
+        is org.commonmark.node.Text -> {
+            append(node.literal ?: "")
+        }
+        is StrongEmphasis -> {
+            pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
+            var child = node.firstChild
+            while (child != null) {
+                appendNode(child, theme)
+                child = child.next
             }
-            is StrongEmphasis -> {
-                pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
-                appendInlineNodes(current.firstChild)
-                pop()
+            pop()
+        }
+        is Emphasis -> {
+            pushStyle(SpanStyle(fontStyle = FontStyle.Italic))
+            var child = node.firstChild
+            while (child != null) {
+                appendNode(child, theme)
+                child = child.next
             }
-            is Emphasis -> {
-                pushStyle(SpanStyle(fontStyle = FontStyle.Italic))
-                appendInlineNodes(current.firstChild)
-                pop()
-            }
-            is Code -> {
-                pushStyle(
-                    SpanStyle(
-                        fontFamily = TypewriterMonospace,
-                        background = TintaCodeBackground,
-                        color = TintaCodeText,
-                        fontSize = 13.sp
-                    )
+            pop()
+        }
+        is Code -> {
+            pushStyle(
+                SpanStyle(
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    fontSize = (theme.fontSizeSp - 2f).coerceAtLeast(11f).sp,
+                    background = theme.colors.codeBackground,
+                    color = theme.colors.codeText
                 )
-                append(" ${current.literal} ")
-                pop()
-            }
-            is Link -> {
-                val url = current.destination ?: ""
-                val linkAnnotation = LinkAnnotation.Url(
-                    url = url,
-                    styles = TextLinkStyles(
-                        style = SpanStyle(
-                            color = TintaTerracotta,
-                            textDecoration = TextDecoration.Underline
-                        )
-                    )
+            )
+            append(" ${node.literal ?: ""} ")
+            pop()
+        }
+        is Link -> {
+            val destination = node.destination ?: ""
+            val linkStyles = TextLinkStyles(
+                style = SpanStyle(
+                    color = theme.colors.accent,
+                    textDecoration = TextDecoration.Underline
                 )
-                withLink(linkAnnotation) {
-                    appendInlineNodes(current.firstChild)
-                }
+            )
+            pushLink(LinkAnnotation.Url(destination, styles = linkStyles))
+            var child = node.firstChild
+            while (child != null) {
+                appendNode(child, theme)
+                child = child.next
             }
-            is HardLineBreak -> {
-                append("\n")
-            }
-            is SoftLineBreak -> {
-                append(" ")
-            }
-            else -> {
-                appendInlineNodes(current.firstChild)
+            pop()
+        }
+        is HardLineBreak -> {
+            append("\n")
+        }
+        is SoftLineBreak -> {
+            append(" ")
+        }
+        else -> {
+            var child = node.firstChild
+            while (child != null) {
+                appendNode(child, theme)
+                child = child.next
             }
         }
-        current = current.next
     }
 }

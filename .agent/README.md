@@ -66,6 +66,11 @@ graph TD
    * Konsep estetika *Warm Parchment* vs *Cold Dark Mode*.
    * Tipografi koran cetak: Kombinasi font Serif (Playfair/Merriweather) dan Typewriter Monospace (Courier).
    * Prinsip kustomisasi komponen Jetpack Compose yang *scalable*.
+3. **[apple_books_ui_transformation.md](03_architecture_and_code/apple_books_ui_transformation.md)**
+   * Bedah transformasi UI: "Apple Books Wannabe" untuk pembaca berkas Markdown.
+   * Implementasi 6 tema Apple Books (`Original`, `Quiet`, `Paper`, `Bold`, `Calm`, `Focus`).
+   * Floating liquid glass bottom navigation & Reading Goals modal sheet.
+
 
 ---
 

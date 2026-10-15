@@ -1,7 +1,12 @@
 package com.zeeonworks.tinta.ui.reader
 
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +17,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,10 +28,8 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -34,25 +39,32 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.zeeonworks.tinta.ui.reader.components.AppleThemesBottomSheet
 import com.zeeonworks.tinta.ui.reader.components.EditorialDivider
 import com.zeeonworks.tinta.ui.reader.components.MarkdownContent
-import com.zeeonworks.tinta.ui.theme.TintaBorderHairline
-import com.zeeonworks.tinta.ui.theme.TintaCharcoalInk
-import com.zeeonworks.tinta.ui.theme.TintaMutedInk
-import com.zeeonworks.tinta.ui.theme.TintaPaperCard
-import com.zeeonworks.tinta.ui.theme.TintaParchmentBackground
-import com.zeeonworks.tinta.ui.theme.TintaTerracotta
-import java.util.Locale
+import com.zeeonworks.tinta.ui.theme.AppleBooksThemeProvider
+import com.zeeonworks.tinta.ui.theme.AppleBooksThemePreset
+import com.zeeonworks.tinta.ui.theme.AppleBooksThemeState
 
+/**
+ * 🍏 Apple Books Reading Canvas & "Themes & Settings" Integration (Plek Ketiplek Screenshot 2)
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderScreen(
@@ -64,27 +76,37 @@ fun ReaderScreen(
     val context = LocalContext.current
     val scrollState = rememberScrollState()
 
+    // Apple Books Live Reading Settings State
+    var themeState by remember {
+        mutableStateOf(AppleBooksThemeState(preset = AppleBooksThemePreset.CALM)) // Defaults to Calm (Screenshot 2)
+    }
+    var showThemesSheet by remember { mutableStateOf(false) }
+
     LaunchedEffect(archiveId) {
         viewModel.loadDocument(archiveId)
     }
 
-    Scaffold(
-        topBar = {
-            Column {
+    val currentColors = themeState.colors
+    val backgroundColor = currentColors.background
+
+    AppleBooksThemeProvider(themeState = themeState) {
+        Scaffold(
+            topBar = {
                 TopAppBar(
                     title = {
-                        Column {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Muted Book/Document Title (Screenshot 2)
                             Text(
-                                text = uiState.title.ifBlank { "THE GAZETTE" },
-                                style = MaterialTheme.typography.titleMedium,
-                                color = TintaCharcoalInk,
+                                text = uiState.title.ifBlank { "Tinta Dispatch" },
+                                fontSize = 13.sp,
+                                fontFamily = themeState.font.fontFamily,
+                                fontWeight = FontWeight.Normal,
+                                color = currentColors.textMuted,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "THE GAZETTE • EDITORIAL DISPATCH",
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                color = TintaMutedInk
                             )
                         }
                     },
@@ -92,12 +114,33 @@ fun ReaderScreen(
                         IconButton(onClick = onBack) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Return to Archives",
-                                tint = TintaCharcoalInk
+                                contentDescription = "Return to Library",
+                                tint = currentColors.textPrimary
                             )
                         }
                     },
                     actions = {
+                        // "Aa" Theme & Settings trigger button (Screenshot 2)
+                        Box(
+                            modifier = Modifier
+                                .padding(end = 4.dp)
+                                .height(32.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(currentColors.surface)
+                                .clickable { showThemesSheet = true }
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Aa",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Serif,
+                                color = currentColors.textPrimary
+                            )
+                        }
+
+                        // Share Action
                         if (uiState.content.isNotBlank()) {
                             IconButton(
                                 onClick = {
@@ -114,184 +157,217 @@ fun ReaderScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.Share,
                                     contentDescription = "Share Dispatch",
-                                    tint = TintaCharcoalInk
+                                    tint = currentColors.textPrimary
                                 )
                             }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = TintaParchmentBackground
+                        containerColor = backgroundColor
                     )
                 )
-                HorizontalDivider(thickness = 1.dp, color = TintaBorderHairline)
-            }
-        },
-        containerColor = TintaParchmentBackground
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            when {
-                uiState.isLoading -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        CircularProgressIndicator(
-                            color = TintaTerracotta,
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.height(14.dp))
-                        Text(
-                            text = "Typesetting dispatch...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TintaMutedInk
-                        )
-                    }
-                }
-
-                uiState.errorMessage != null && !uiState.isMissingFile -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "UNREADABLE DISPATCH",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = TintaTerracotta
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = uiState.errorMessage ?: "Unknown error occurred.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            textAlign = TextAlign.Center,
-                            color = TintaCharcoalInk
-                        )
-                        Spacer(modifier = Modifier.height(20.dp))
-                        TextButton(onClick = onBack) {
+            },
+            containerColor = backgroundColor
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .background(backgroundColor)
+            ) {
+                when {
+                    uiState.isLoading -> {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = currentColors.accent,
+                                strokeWidth = 2.5.dp
+                            )
+                            Spacer(modifier = Modifier.height(14.dp))
                             Text(
-                                text = "RETURN TO ARCHIVES",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = TintaTerracotta
+                                text = "Preparing pages in ${themeState.preset.title}...",
+                                fontSize = 13.sp,
+                                color = currentColors.textMuted
                             )
                         }
                     }
-                }
 
-                else -> {
-                    // Main Article Content
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(scrollState)
-                            .padding(horizontal = 20.dp, vertical = 16.dp)
-                    ) {
-                        // Document Headline
-                        Text(
-                            text = uiState.title,
-                            style = MaterialTheme.typography.displayLarge.copy(
-                                fontSize = 26.sp,
-                                lineHeight = 32.sp,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = TintaCharcoalInk
+                    uiState.errorMessage != null && uiState.isMissingFile -> {
+                        AlertDialog(
+                            onDismissRequest = { /* Prevent dismissal */ },
+                            title = {
+                                Text(
+                                    text = "Dispatch Missing",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            },
+                            text = {
+                                Text(
+                                    text = uiState.errorMessage ?: "The file cannot be accessed."
+                                )
+                            },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        viewModel.removeMissingFileFromArchives {
+                                            onBack()
+                                        }
+                                    }
+                                ) {
+                                    Text("Remove from Library", color = Color(0xFFFF3B30))
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = onBack) {
+                                    Text("Return")
+                                }
+                            }
                         )
+                    }
 
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        // Metadata byline banner
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                    uiState.errorMessage != null -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
                             Text(
-                                text = uiState.dateStamp.uppercase(Locale.US),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TintaMutedInk
+                                text = "Unable to Open Dispatch",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = currentColors.textPrimary
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = uiState.errorMessage ?: "An unexpected error occurred.",
+                                fontSize = 14.sp,
+                                color = currentColors.textMuted,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(18.dp))
+                            TextButton(onClick = onBack) {
+                                Text("Return to Library", color = currentColors.accent)
+                            }
+                        }
+                    }
+
+                    else -> {
+                        // Main Apple Books Reading Canvas (Screenshot 2)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(scrollState)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    // Tap page to show/hide Themes & Settings
+                                    showThemesSheet = true
+                                }
+                                .padding(horizontal = 24.dp, vertical = 16.dp)
+                        ) {
+                            // Centered Editorial Title (Screenshot 2)
+                            Text(
+                                text = uiState.title,
+                                fontSize = 28.sp,
+                                fontFamily = themeState.font.fontFamily,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                color = currentColors.textPrimary,
+                                lineHeight = 34.sp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 14.dp)
+                            )
+
+                            // Date / Subhead Metadata (Screenshot 2 style)
+                            if (uiState.dateStamp.isNotBlank()) {
+                                Text(
+                                    text = uiState.dateStamp,
+                                    fontSize = 14.sp,
+                                    fontFamily = themeState.font.fontFamily,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    textAlign = TextAlign.Center,
+                                    color = currentColors.textSecondary,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 6.dp)
+                                )
+                            }
 
                             Text(
-                                text = "${String.format(Locale.US, "%,d", uiState.wordCount)} WORDS • ${uiState.readingTimeMinutes} MIN READ",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TintaTerracotta
+                                text = "${uiState.wordCount} words • ~${uiState.readingTimeMinutes} min read",
+                                fontSize = 11.sp,
+                                textAlign = TextAlign.Center,
+                                color = currentColors.textMuted,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 16.dp)
                             )
+
+                            EditorialDivider(ornament = "• • •")
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Fluid Markdown Content
+                            MarkdownContent(
+                                markdown = uiState.content,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(modifier = Modifier.height(48.dp))
+
+                            EditorialDivider(ornament = "— ❦ —")
+
+                            Spacer(modifier = Modifier.height(60.dp))
                         }
 
-                        EditorialDivider(ornament = "✦ ✦ ✦")
-
-                        // Rendered Markdown
-                        MarkdownContent(markdown = uiState.content)
-
-                        Spacer(modifier = Modifier.height(32.dp))
-
-                        // Newspaper End-of-Article Seal
-                        EditorialDivider(ornament = "— ❦ —")
-                        Text(
-                            text = "FINIS",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                letterSpacing = 3.sp,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = TintaMutedInk,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(48.dp))
+                        // Floating Quick "Aa" Pill Button on bottom right for easy one-handed access
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(bottom = 20.dp, end = 20.dp),
+                            contentAlignment = Alignment.BottomEnd
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .shadow(elevation = 8.dp, shape = CircleShape)
+                                    .clip(CircleShape)
+                                    .background(currentColors.surface)
+                                    .clickable { showThemesSheet = true }
+                                    .padding(14.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Aa",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Serif,
+                                    color = currentColors.textPrimary
+                                )
+                            }
+                        }
                     }
+                }
+
+                // Apple Books Themes & Settings Modal Bottom Sheet (Screenshot 2)
+                if (showThemesSheet) {
+                    AppleThemesBottomSheet(
+                        themeState = themeState,
+                        onThemeStateChange = { updated ->
+                            themeState = updated
+                        },
+                        onDismissRequest = {
+                            showThemesSheet = false
+                        }
+                    )
                 }
             }
         }
-    }
-
-    // Missing File Dialog (Edge Case FR 6.3)
-    if (uiState.isMissingFile) {
-        AlertDialog(
-            onDismissRequest = onBack,
-            title = {
-                Text(
-                    text = "Dispatch Unavailable",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TintaCharcoalInk
-                )
-            },
-            text = {
-                Text(
-                    text = "The source file could not be found or access has expired (it may have been moved or deleted from the device). Would you like to remove this clipping from The Archives?",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TintaMutedInk
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.removeMissingFileFromArchives(onBack)
-                    }
-                ) {
-                    Text(
-                        text = "REMOVE FROM ARCHIVES",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = TintaTerracotta
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = onBack) {
-                    Text(
-                        text = "RETURN",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = TintaMutedInk
-                    )
-                }
-            },
-            containerColor = TintaPaperCard,
-            shape = RoundedCornerShape(2.dp)
-        )
     }
 }

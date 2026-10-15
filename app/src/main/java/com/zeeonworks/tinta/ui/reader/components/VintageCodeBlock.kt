@@ -36,15 +36,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.zeeonworks.tinta.ui.theme.TintaBorderHairline
-import com.zeeonworks.tinta.ui.theme.TintaCodeBackground
-import com.zeeonworks.tinta.ui.theme.TintaCodeText
-import com.zeeonworks.tinta.ui.theme.TintaMutedInk
-import com.zeeonworks.tinta.ui.theme.TintaTagBackground
-import com.zeeonworks.tinta.ui.theme.TintaTerracotta
+import com.zeeonworks.tinta.ui.theme.LocalAppleBooksTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -59,34 +55,33 @@ fun VintageCodeBlock(
     val coroutineScope = rememberCoroutineScope()
     var isCopied by remember { mutableStateOf(false) }
     val horizontalScrollState = rememberScrollState()
+    val theme = LocalAppleBooksTheme.current
 
-    val displayLang = language?.trim()?.uppercase()?.ifBlank { "TYPEWRITER / CODE" } ?: "TYPEWRITER / CODE"
+    val displayLang = language?.trim()?.uppercase()?.ifBlank { "CODE" } ?: "CODE"
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(3.dp))
-            .background(TintaCodeBackground)
-            .border(BorderStroke(1.dp, TintaBorderHairline), RoundedCornerShape(3.dp))
+            .clip(RoundedCornerShape(8.dp))
+            .background(theme.colors.codeBackground)
+            .border(BorderStroke(0.5.dp, theme.colors.border), RoundedCornerShape(8.dp))
     ) {
         // Top Bar: Language Badge & Copy Button
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(TintaTagBackground.copy(alpha = 0.5f))
-                .border(BorderStroke(0.5.dp, TintaBorderHairline))
-                .padding(horizontal = 10.dp, vertical = 4.dp),
+                .background(theme.colors.surface)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = displayLang,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 10.sp,
-                    letterSpacing = 0.8.sp,
-                    fontWeight = FontWeight.Bold
-                ),
-                color = TintaMutedInk
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp,
+                color = theme.colors.textMuted
             )
 
             Row(
@@ -95,53 +90,60 @@ fun VintageCodeBlock(
                 if (isCopied) {
                     Text(
                         text = "COPIED",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                        color = TintaTerracotta
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = theme.colors.accent
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                }
-
-                IconButton(
-                    onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip = ClipData.newPlainText("Tinta Code Snippet", code)
-                        clipboard.setPrimaryClip(clip)
-
-                        isCopied = true
-                        Toast.makeText(context, "Code copied to clipboard", Toast.LENGTH_SHORT).show()
-                        onCopied?.invoke()
-
-                        coroutineScope.launch {
-                            delay(2000)
-                            isCopied = false
-                        }
-                    },
-                    modifier = Modifier.size(28.dp)
-                ) {
                     Icon(
-                        imageVector = if (isCopied) Icons.Outlined.Check else Icons.Outlined.ContentCopy,
-                        contentDescription = "Copy Code",
-                        tint = if (isCopied) TintaTerracotta else TintaMutedInk,
-                        modifier = Modifier.size(16.dp)
+                        imageVector = Icons.Outlined.Check,
+                        contentDescription = "Copied",
+                        tint = theme.colors.accent,
+                        modifier = Modifier.size(14.dp)
                     )
+                } else {
+                    IconButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("Code Dispatch", code)
+                            clipboard.setPrimaryClip(clip)
+
+                            isCopied = true
+                            onCopied?.invoke()
+
+                            Toast.makeText(context, "Code copied to clipboard", Toast.LENGTH_SHORT).show()
+
+                            coroutineScope.launch {
+                                delay(2000)
+                                isCopied = false
+                            }
+                        },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.ContentCopy,
+                            contentDescription = "Copy code block",
+                            tint = theme.colors.textSecondary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
             }
         }
 
-        // Code Body with horizontal scrolling
+        // Code Body with horizontal scroll
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(horizontalScrollState)
-                .padding(12.dp)
+                .padding(14.dp)
         ) {
             Text(
                 text = code.trimEnd(),
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 13.sp,
-                    lineHeight = 19.sp
-                ),
-                color = TintaCodeText
+                fontSize = (theme.fontSizeSp - 3f).coerceAtLeast(11f).sp,
+                fontFamily = FontFamily.Monospace,
+                lineHeight = (theme.fontSizeSp * 1.3f).sp,
+                color = theme.colors.codeText
             )
         }
     }
