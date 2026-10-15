@@ -1,0 +1,57 @@
+name: 🐛 Bug Report
+description: Report a rendering issue, file access bug, or unexpected behavior in Tinta.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue to keep Tinta running reliably!
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: When opening a 20,000 word markdown document with nested lists...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this behavior?
+      placeholder: |
+        1. Open Tinta
+        2. Tap the '+' button in The Archives
+        3. Pick file 'example.md'
+        4. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Device & OS
+      description: What Android device and version are you using?
+      placeholder: Pixel 7, Android 14 (API 34)
+    validations:
+      required: false
+
+  - type: textarea
+    id: sample_markdown
+    attributes:
+      label: Sample Markdown Snippet (Optional)
+      description: If this is related to a rendering bug, paste the offending markdown here.
+      render: markdown
+    validations:
+      required: false

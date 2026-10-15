@@ -1,15 +1,31 @@
 *.iml
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
+local.properties
+
+# Android Studio / IntelliJ IDEA
+.idea/
+!.idea/codeStyles/
+!.idea/copyright/
+
+# Build artifacts
 /build
+/*/build
 /captures
 .externalNativeBuild
 .cxx
-local.properties
+*.apk
+*.aab
+release_assets/
+
+# Keystores and signing keys
+*.jks
+*.keystore
+release.keystore
+
+# OS & Environment
+.DS_Store
+Thumbs.db
+
+# Kotlin daemon
+.kotlin

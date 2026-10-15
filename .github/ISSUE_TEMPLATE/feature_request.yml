@@ -1,0 +1,35 @@
+name: ✨ Feature Request
+description: Suggest an editorial improvement, new Markdown feature, or visual refinement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We love suggestions that enhance the vintage editorial reading experience!
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Motivation
+      description: Is your feature request related to a specific reading challenge or workflow?
+      placeholder: Reading late at night with the default parchment paper is slightly too bright...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution / Editorial Design
+      description: Describe what you would like Tinta to do or look like.
+      placeholder: Add a "Midnight Sepia" paper tint in the reader settings...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or workarounds?
+    validations:
+      required: false
